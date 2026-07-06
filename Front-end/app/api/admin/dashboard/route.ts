@@ -1,0 +1,30 @@
+import { NextResponse } from 'next/server';
+
+const backendBaseUrl = process.env.BACKEND_API_URL ?? 'http://localhost:4000/api';
+
+const fallbackData = {
+  stats: [
+    { label: 'Total Orders', value: '—', detail: 'Unable to connect to server' },
+    { label: 'Active Deliveries', value: '—', detail: 'Unable to connect to server' },
+    { label: 'Available Drivers', value: '—', detail: 'Unable to connect to server' },
+  ],
+  totalOrders: 0,
+  totalDrivers: 0,
+  totalRevenue: 0,
+};
+
+export async function GET() {
+  try {
+    const response = await fetch(`${backendBaseUrl}/admin/dashboard`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    });
+    const payload = await response.json();
+    if (response.ok) {
+      return NextResponse.json(payload);
+    }
+    return NextResponse.json(payload, { status: response.status });
+  } catch {
+    return NextResponse.json(fallbackData);
+  }
+}

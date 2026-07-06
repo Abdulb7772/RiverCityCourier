@@ -1,0 +1,13 @@
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+dist/
+build/
+.env
+.env.*
+**/.env
+**/.env.*
+*.log
+Mongodb credentials.txt
+package-lock.json
