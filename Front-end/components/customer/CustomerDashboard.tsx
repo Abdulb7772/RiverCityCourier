@@ -55,10 +55,11 @@ export function CustomerDashboard({ userEmail, userName }: CustomerDashboardProp
     let mounted = true;
     let interval: ReturnType<typeof setInterval>;
 
-    const email = userEmail;
+    const email = userEmail as string;
+    const customerName = typeof userName === 'string' && userName.trim() ? userName : undefined;
     async function fetchOrders() {
       try {
-        const data = await fetchCustomerOrders(email, userName ?? undefined);
+        const data = await fetchCustomerOrders(email, customerName);
         if (mounted) setOrders(data);
       } catch {
         if (mounted) setOrders([]);

@@ -126,7 +126,8 @@ export function DeliveryHistoryScreen({ userEmail, userName }: Props) {
 
   useEffect(() => {
     if (!userEmail) return;
-    fetchCustomerOrders(userEmail!, userName ?? undefined)
+    const customerName = typeof userName === 'string' && userName.trim() ? userName : undefined;
+    fetchCustomerOrders(userEmail!, customerName)
       .then(setOrders)
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));

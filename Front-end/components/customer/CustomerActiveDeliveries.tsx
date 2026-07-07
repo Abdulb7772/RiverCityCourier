@@ -129,10 +129,11 @@ export function CustomerActiveDeliveries({ userEmail, userName }: Props) {
     if (!userEmail) return;
     let mounted = true;
     let interval: ReturnType<typeof setInterval>;
+    const customerName = typeof userName === 'string' && userName.trim() ? userName : undefined;
 
     async function fetchOrders() {
       try {
-        const data = await fetchCustomerOrders(userEmail!, userName ?? undefined);
+        const data = await fetchCustomerOrders(userEmail!, customerName);
         if (mounted) setOrders(data);
       } catch {
         if (mounted) setOrders([]);
