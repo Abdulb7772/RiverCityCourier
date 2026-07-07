@@ -5,6 +5,7 @@ import {
   fetchActiveOrder,
   updateOrderStatus,
   updateOrderPhotos,
+  updateOrderCodAmount,
   type DriverOrder,
 } from '@/lib/driver-orders';
 import { openCloudinaryWidget, isCloudinaryConfigured } from '@/lib/cloudinary-upload';
@@ -57,13 +58,17 @@ export function DriverInProgressOrder({ userEmail }: Props) {
 
   const [pickupPhotos, setPickupPhotos] = useState<string[]>([]);
   const [deliveryPhoto, setDeliveryPhoto] = useState<string>('');
+  const [codAmount, setCodAmount] = useState<number>(0);
 
   useEffect(() => {
     if (order) {
       setPickupPhotos(order.pickupPhotos || []);
       setDeliveryPhoto(order.deliveryPhoto || '');
+      setCodAmount(order.codAmount || 0);
     }
   }, [order]);
+
+  const isCodOrder = order && (order.paymentMethod === 'cash' || order.paymentMethod === 'cash_on_delivery');
 
   const handleSimpleAction = async (nextStatus: string) => {
     if (!order) return;
@@ -359,6 +364,26 @@ export function DriverInProgressOrder({ userEmail }: Props) {
                 <p className="text-xs text-orange-100/60 mb-3">
                   Upload a <span className="text-white font-semibold">delivery photo</span> (proof of delivery) to complete.
                 </p>
+                {isCodOrder && (
+                  <div className="border border-emerald-900/30 bg-emerald-950/15 rounded-md p-4">
+                    <p className="text-[0.55rem] uppercase tracking-[0.3em] text-emerald-400/70 mb-2">Cash on Delivery</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-white/70">Amount collected:</span>
+                      <div className="relative flex-1 max-w-[160px]">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/50">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={codAmount || ''}
+                          onChange={(e) => setCodAmount(parseFloat(e.target.value) || 0)}
+                          className="w-full border border-orange-900/40 bg-orange-950/30 px-6 py-2 text-sm text-white placeholder-white/30 outline-none transition focus:border-orange-500/60"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="border border-dashed border-orange-900/30 rounded-md p-4">
                   <p className="text-xs text-orange-100/50 mb-3">Delivery Photo</p>
                   {deliveryPhoto ? (
@@ -381,7 +406,13 @@ export function DriverInProgressOrder({ userEmail }: Props) {
                 <button
                   type="button"
                   disabled={updating || !deliveryPhoto}
-                  onClick={() => handlePhotosThenAction('completed', [deliveryPhoto], 'deliveryPhoto')}
+                  onClick={async () => {
+                    if (!order) return;
+                    if (isCodOrder && codAmount > 0) {
+                      await updateOrderCodAmount(order.id, codAmount, userEmail);
+                    }
+                    await handlePhotosThenAction('completed', [deliveryPhoto], 'deliveryPhoto');
+                  }}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-400/50 hover:bg-emerald-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {updating ? 'Updating...' : 'Mark as Delivered'}

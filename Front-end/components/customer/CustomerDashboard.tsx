@@ -12,20 +12,34 @@ type CustomerDashboardProps = {
   entrySource?: "login" | "signup" | null;
 };
 
-const statusProgress: Record<CustomerOrder['status'], number> = {
-  new: 15,
-  processing: 40,
-  picked_up: 70,
+const stepFlow = [
+  { key: 'new', label: 'Order Placed' },
+  { key: 'accepted', label: 'Driver Assigned' },
+  { key: 'arrived_at_pickup', label: 'Arrived' },
+  { key: 'picked_up', label: 'Picked Up' },
+  { key: 'in_transit', label: 'In Transit' },
+  { key: 'completed', label: 'Delivered' },
+] as const;
+
+const statusProgress: Record<string, number> = {
+  new: 0,
+  accepted: 20,
+  arrived_at_pickup: 40,
+  picked_up: 60,
+  in_transit: 80,
   completed: 100,
   rejected: 0,
 };
 
-const statusLabel: Record<CustomerOrder['status'], string> = {
+const statusLabel: Record<string, string> = {
   new: 'New',
-  processing: 'Processing',
+  accepted: 'Assigned',
+  arrived_at_pickup: 'Arrived',
   picked_up: 'Picked Up',
+  in_transit: 'In Transit',
+  arrived_at_destination: 'Arrived',
   completed: 'Completed',
-  rejected: 'Rejected',
+  rejected: 'Cancelled',
 };
 
 export function CustomerDashboard({ userEmail, userName }: CustomerDashboardProps) {
@@ -41,9 +55,10 @@ export function CustomerDashboard({ userEmail, userName }: CustomerDashboardProp
     let mounted = true;
     let interval: ReturnType<typeof setInterval>;
 
+    const email = userEmail;
     async function fetchOrders() {
       try {
-        const data = await fetchCustomerOrders(userEmail, userName ?? undefined);
+        const data = await fetchCustomerOrders(email, userName ?? undefined);
         if (mounted) setOrders(data);
       } catch {
         if (mounted) setOrders([]);
@@ -64,7 +79,9 @@ export function CustomerDashboard({ userEmail, userName }: CustomerDashboardProp
   );
 
   const inProgressOrders = useMemo(
-    () => orders.filter((o) => o.status === 'processing' || o.status === 'picked_up'),
+    () => orders.filter((o) =>
+      ['accepted', 'arrived_at_pickup', 'picked_up', 'in_transit', 'arrived_at_destination'].includes(o.status)
+    ),
     [orders],
   );
 
@@ -234,17 +251,46 @@ export function CustomerDashboard({ userEmail, userName }: CustomerDashboardProp
                     </div>
                   </div>
 
-                  {/* Progress bar */}
+                  {/* Progress steps */}
                   <div className="mt-4">
-                    <div className="flex justify-between text-xs text-orange-400/60 mb-1">
-                      <span>Progress</span>
-                      <span>{statusProgress[order.status]}%</span>
+                    <div className="flex items-center justify-between">
+                      {stepFlow.map((step, idx) => {
+                        const stepOrder = stepFlow.findIndex(s => s.key === order.status);
+                        const currentIdx = stepOrder >= 0 ? stepOrder : 0;
+                        const isCompleted = idx < currentIdx;
+                        const isCurrent = idx === currentIdx;
+                        return (
+                          <div key={step.key} className="flex flex-col items-center relative">
+                            <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.6rem] font-bold border-2 ${
+                              isCompleted
+                                ? 'border-emerald-400 bg-emerald-500/30 text-emerald-300'
+                                : isCurrent
+                                ? 'border-orange-400 bg-orange-500/30 text-orange-300'
+                                : 'border-white/20 bg-white/10 text-white/40'
+                            }`}>
+                              {isCompleted ? '\u2713' : idx + 1}
+                            </div>
+                            <p className={`mt-1.5 text-[0.6rem] font-semibold leading-tight text-center ${
+                              isCompleted ? 'text-emerald-300' : isCurrent ? 'text-orange-200' : 'text-white/40'
+                            }`}>{step.label}</p>
+                            {step.key === 'accepted' && (currentIdx >= idx) && order.assignedDriver && (
+                              <span className="mt-0.5 max-w-[80px] truncate rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[0.5rem] text-blue-200">
+                                {order.assignedDriver}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="h-1.5 w-full bg-orange-950/60">
-                      <div
-                        className="h-full bg-linear-to-r from-orange-500 to-amber-400 transition-all duration-500"
-                        style={{ width: `${statusProgress[order.status]}%` }}
-                      />
+                    {/* Connecting lines */}
+                    <div className="relative mt-2 flex items-center justify-between">
+                      {stepFlow.slice(0, -1).map((_, idx) => {
+                        const stepOrder = stepFlow.findIndex(s => s.key === order.status);
+                        const currentIdx = stepOrder >= 0 ? stepOrder : 0;
+                        return (
+                          <div key={idx} className={`flex-1 h-1 mx-0.5 rounded-full ${idx < currentIdx ? 'bg-emerald-500/60' : 'bg-white/15'}`} />
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

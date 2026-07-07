@@ -32,6 +32,7 @@ export type DriverOrder = {
   deliveryDate: string;
   pickupTime: string;
   deliveryTime: string;
+  codAmount: number;
 };
 
 export type PaginatedResult<T> = {
@@ -134,6 +135,21 @@ export async function updateOrderStatus(orderId: string, status: string, email: 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to update order status.');
+  }
+
+  return response.json();
+}
+
+export async function updateOrderCodAmount(orderId: string, codAmount: number, email: string): Promise<DriverOrder> {
+  const response = await fetch(`${apiBase}/${orderId}/cod-amount?email=${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codAmount }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update COD amount.');
   }
 
   return response.json();

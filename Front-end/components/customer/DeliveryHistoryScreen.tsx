@@ -5,36 +5,43 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CustomerNavbar } from './CustomerNavbar';
 import { CustomerSidebar } from './CustomerSidebar';
-import { CustomerOrder, CustomerOrderStatus, fetchCustomerOrders } from '@/lib/customer-orders';
+import { CustomerOrder, fetchCustomerOrders } from '@/lib/customer-orders';
 
 type Props = {
   userEmail?: string | null;
   userName?: string | null;
 };
 
-const statusStyles: Record<CustomerOrderStatus, string> = {
+const statusStyles: Record<string, string> = {
   new: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
-  processing: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+  accepted: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
+  arrived_at_pickup: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
   picked_up: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-200',
+  in_transit: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
+  arrived_at_destination: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200',
   completed: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
   rejected: 'border-rose-500/40 bg-rose-500/10 text-rose-200',
 };
 
-const statusLabel: Record<CustomerOrderStatus, string> = {
+const statusLabel: Record<string, string> = {
   new: 'New',
-  processing: 'Processing',
+  accepted: 'Assigned',
+  arrived_at_pickup: 'Arrived',
   picked_up: 'Picked Up',
+  in_transit: 'In Transit',
+  arrived_at_destination: 'Arrived',
   completed: 'Completed',
   rejected: 'Cancelled',
 };
 
-const progressMap: Record<CustomerOrderStatus, number> = {
-  new: 15,
-  processing: 40,
-  picked_up: 70,
-  completed: 100,
-  rejected: 0,
-};
+const stepFlow = [
+  { key: 'new', label: 'Order Placed' },
+  { key: 'accepted', label: 'Driver Assigned' },
+  { key: 'arrived_at_pickup', label: 'Arrived' },
+  { key: 'picked_up', label: 'Picked Up' },
+  { key: 'in_transit', label: 'In Transit' },
+  { key: 'completed', label: 'Delivered' },
+] as const;
 
 function TruckIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -204,7 +211,6 @@ export function DeliveryHistoryScreen({ userEmail, userName }: Props) {
             </div>
           ) : (
             orders.map((order) => {
-              const progress = progressMap[order.status];
               return (
                 <article key={order.id} className="border border-orange-900/40 bg-slate-950/60 p-5 sm:p-6">
 
@@ -212,8 +218,8 @@ export function DeliveryHistoryScreen({ userEmail, userName }: Props) {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-bold text-white">{order.orderNumber}</span>
-                      <span className={`border px-2.5 py-0.5 text-[0.7rem] font-semibold ${statusStyles[order.status]}`}>
-                        {statusLabel[order.status]}
+                      <span className={`border px-2.5 py-0.5 text-[0.7rem] font-semibold ${statusStyles[order.status] || 'border-white/20 bg-white/10 text-white/80'}`}>
+                        {statusLabel[order.status] || order.status}
                       </span>
                       <span className="border border-slate-500/30 bg-slate-500/10 px-2.5 py-0.5 text-[0.7rem] font-medium text-slate-300">
                         {order.priority}
@@ -228,17 +234,45 @@ export function DeliveryHistoryScreen({ userEmail, userName }: Props) {
                     </div>
                   </div>
 
-                  {/* Progress bar */}
+                  {/* Progress steps */}
                   <div className="mt-4">
-                    <div className="flex items-center justify-between text-xs text-orange-400/50 mb-1.5">
-                      <span>Order progress</span>
-                      <span>{progress}%</span>
+                    <div className="flex items-center justify-between">
+                      {stepFlow.map((step, idx) => {
+                        const stepOrder = stepFlow.findIndex(s => s.key === order.status);
+                        const currentIdx = stepOrder >= 0 ? stepOrder : 0;
+                        const isCompleted = idx < currentIdx;
+                        const isCurrent = idx === currentIdx;
+                        return (
+                          <div key={step.key} className="flex flex-col items-center relative">
+                            <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[0.6rem] font-bold border-2 ${
+                              isCompleted
+                                ? 'border-emerald-400 bg-emerald-500/30 text-emerald-300'
+                                : isCurrent
+                                ? 'border-orange-400 bg-orange-500/30 text-orange-300'
+                                : 'border-white/20 bg-white/10 text-white/40'
+                            }`}>
+                              {isCompleted ? '\u2713' : idx + 1}
+                            </div>
+                            <p className={`mt-1.5 text-[0.6rem] font-semibold leading-tight text-center ${
+                              isCompleted ? 'text-emerald-300' : isCurrent ? 'text-orange-200' : 'text-white/40'
+                            }`}>{step.label}</p>
+                            {step.key === 'accepted' && (currentIdx >= idx) && order.assignedDriver && (
+                              <span className="mt-0.5 max-w-[80px] truncate rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[0.5rem] text-blue-200">
+                                {order.assignedDriver}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="h-1.5 w-full bg-orange-950/60">
-                      <div
-                        className="h-full bg-linear-to-r from-orange-500 to-amber-400 transition-all duration-700"
-                        style={{ width: `${progress}%` }}
-                      />
+                    <div className="relative mt-2 flex items-center justify-between">
+                      {stepFlow.slice(0, -1).map((_, idx) => {
+                        const stepOrder = stepFlow.findIndex(s => s.key === order.status);
+                        const currentIdx = stepOrder >= 0 ? stepOrder : 0;
+                        return (
+                          <div key={idx} className={`flex-1 h-1 mx-0.5 rounded-full ${idx < currentIdx ? 'bg-emerald-500/60' : 'bg-white/15'}`} />
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -285,7 +319,7 @@ export function DeliveryHistoryScreen({ userEmail, userName }: Props) {
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-orange-900/20 pt-4">
                     <div className="flex items-center gap-2">
                       {order.status === 'new' && (
-                        <span className="text-xs text-sky-400">Awaiting processing</span>
+                        <span className="text-xs text-sky-400">Awaiting driver assignment</span>
                       )}
                       {order.status === 'completed' && (
                         <span className="flex items-center gap-1.5 text-xs text-emerald-400">
@@ -296,7 +330,7 @@ export function DeliveryHistoryScreen({ userEmail, userName }: Props) {
                       {order.status === 'rejected' && (
                         <span className="text-xs text-rose-400">Cancelled</span>
                       )}
-                      {(order.status === 'processing' || order.status === 'picked_up') && (
+                      {(order.status === 'accepted' || order.status === 'arrived_at_pickup' || order.status === 'picked_up' || order.status === 'in_transit' || order.status === 'arrived_at_destination') && (
                         <span className="text-xs text-amber-400">In transit</span>
                       )}
                     </div>

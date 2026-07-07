@@ -1,4 +1,4 @@
-const { getOrdersByDriver, getOrderById, getActiveOrder, getCompletedOrders, updateOrderStatus, updateOrderPhotos } = require('../models/driverOrderModel');
+const { getOrdersByDriver, getOrderById, getActiveOrder, getCompletedOrders, updateOrderStatus, updateOrderPhotos, updateOrderCodAmount } = require('../models/driverOrderModel');
 const { insertActivity } = require('../models/activityModel');
 const { insertNotification } = require('../models/notificationModel');
 
@@ -136,6 +136,27 @@ async function getActiveOrderHandler(req, res) {
   }
 }
 
+async function patchOrderCodAmount(req, res) {
+  try {
+    const { orderId } = req.params;
+    const { codAmount } = req.body || {};
+    const email = req.query.email || '';
+    if (!email) return res.status(400).json({ error: 'Driver email is required.' });
+    if (codAmount === undefined || codAmount === null || isNaN(Number(codAmount))) {
+      return res.status(400).json({ error: 'Valid codAmount is required.' });
+    }
+    const order = await getOrderById(orderId);
+    if (!order || String(order.assignedDriver || '').trim().toLowerCase() !== String(email || '').trim().toLowerCase()) {
+      return res.status(404).json({ error: 'Order not found or not assigned to you.' });
+    }
+    const updated = await updateOrderCodAmount(orderId, codAmount);
+    return res.json(updated);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update COD amount.';
+    return res.status(500).json({ error: message });
+  }
+}
+
 module.exports = {
   listAssignedOrders,
   getAssignedOrder,
@@ -143,4 +164,5 @@ module.exports = {
   getActiveOrderHandler,
   patchOrderStatus,
   patchOrderPhotos,
+  patchOrderCodAmount,
 };

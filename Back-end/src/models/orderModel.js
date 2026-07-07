@@ -117,6 +117,7 @@ function formatOrder(doc) {
     deliveryDate: doc.deliveryDate || '',
     pickupTime: doc.pickupTime || '',
     deliveryTime: doc.deliveryTime || '',
+    codAmount: doc.codAmount || 0,
   };
 }
 

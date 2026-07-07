@@ -6,20 +6,26 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { CustomerNavbar } from './CustomerNavbar';
 import { CustomerSidebar } from './CustomerSidebar';
-import { CustomerOrder, CustomerOrderStatus, fetchCustomerOrder, updateCustomerOrderStatus, updateCustomerOrder } from '@/lib/customer-orders';
+import { CustomerOrder, fetchCustomerOrder, updateCustomerOrderStatus, updateCustomerOrder } from '@/lib/customer-orders';
 
 const statusStyles: Record<string, { badge: string; accent: string }> = {
   new: { badge: 'border-sky-500/40 bg-sky-500/10 text-sky-300', accent: 'bg-sky-400' },
-  processing: { badge: 'border-amber-500/40 bg-amber-500/10 text-amber-300', accent: 'bg-amber-400' },
+  accepted: { badge: 'border-blue-500/40 bg-blue-500/10 text-blue-300', accent: 'bg-blue-400' },
+  arrived_at_pickup: { badge: 'border-amber-500/40 bg-amber-500/10 text-amber-300', accent: 'bg-amber-400' },
   picked_up: { badge: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300', accent: 'bg-indigo-400' },
+  in_transit: { badge: 'border-violet-500/40 bg-violet-500/10 text-violet-300', accent: 'bg-violet-400' },
+  arrived_at_destination: { badge: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300', accent: 'bg-cyan-400' },
   completed: { badge: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300', accent: 'bg-emerald-400' },
   rejected: { badge: 'border-rose-500/40 bg-rose-500/10 text-rose-300', accent: 'bg-rose-400' },
 };
 
 const statusLabel: Record<string, string> = {
   new: 'New',
-  processing: 'Processing',
+  accepted: 'Assigned',
+  arrived_at_pickup: 'Arrived',
   picked_up: 'Picked Up',
+  in_transit: 'In Transit',
+  arrived_at_destination: 'Arrived',
   completed: 'Completed',
   rejected: 'Cancelled',
 };
@@ -512,7 +518,7 @@ export function CustomerOrderDetail({ orderId, userEmail, userName }: Props) {
                 )}
 
                 {/* Cancel order */}
-                {(order.status === 'new' || order.status === 'processing') && (
+                {(order.status === 'new') && (
                   <button
                     type="button"
                     disabled={cancelling}

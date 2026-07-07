@@ -1,4 +1,4 @@
-export type CustomerOrderStatus = 'new' | 'processing' | 'picked_up' | 'completed' | 'rejected';
+export type CustomerOrderStatus = 'new' | 'accepted' | 'arrived_at_pickup' | 'picked_up' | 'in_transit' | 'arrived_at_destination' | 'completed' | 'rejected';
 
 export type CustomerOrder = {
   id: string;

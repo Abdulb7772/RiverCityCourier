@@ -281,7 +281,7 @@ export function DriverOrderDetails({ orderId, userEmail, userName, onBack }: Pro
               { label: 'Priority', value: order.priority, Icon: PriorityIcon },
               { label: 'ETA', value: order.eta || '\u2014', Icon: ClockIcon },
               { label: 'Distance', value: order.distance || '\u2014', Icon: RulerIcon },
-              { label: 'Payment', value: order.paymentMethod, Icon: CreditCardIcon },
+              { label: 'Payment', value: order.paymentMethod + (order.paymentMethod === 'cash' || order.paymentMethod === 'cash_on_delivery' ? order.codAmount ? ` ($${order.codAmount.toFixed(2)})` : '' : ''), Icon: CreditCardIcon },
               { label: 'Assigned Driver', value: order.assignedDriver, Icon: TruckIcon },
               { label: 'Pickup Date', value: order.pickupDate || '\u2014', Icon: ClockIcon },
               { label: 'Pickup Time', value: order.pickupTime || '\u2014', Icon: ClockIcon },

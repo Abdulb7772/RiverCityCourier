@@ -121,7 +121,16 @@ function formatDriverOrder(doc) {
     deliveryVehicleType: doc.deliveryVehicleType || '',
     pickupDate: doc.pickupDate || '',
     deliveryDate: doc.deliveryDate || '',
+    codAmount: doc.codAmount || 0,
   };
+}
+
+async function updateOrderCodAmount(orderId, codAmount) {
+  const collection = await getCollection();
+  const oid = new ObjectId(orderId);
+  await collection.updateOne({ _id: oid }, { $set: { codAmount: Number(codAmount) } });
+  const updated = await collection.findOne({ _id: oid });
+  return updated ? formatDriverOrder(updated) : null;
 }
 
 module.exports = {
@@ -131,4 +140,5 @@ module.exports = {
   getCompletedOrders,
   updateOrderStatus,
   updateOrderPhotos,
+  updateOrderCodAmount,
 };
