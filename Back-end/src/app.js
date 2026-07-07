@@ -7,11 +7,24 @@ const authRoutes = require('./routes/authRoutes');
 const { backfillMissingUserRoles } = require('./models/userModel');
 
 const app = express();
-const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+const frontendOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: frontendOrigin,
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (frontendOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error(`CORS policy does not allow access from origin ${origin}`));
+    },
     credentials: true,
   }),
 );
