@@ -89,6 +89,8 @@ export function DriverDetailsScreen({ userEmail, userName }: { userEmail?: strin
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState('');
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('Drivers');
   const [verification, setVerification] = useState<DriverVerification | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectComment, setRejectComment] = useState('');
@@ -161,16 +163,16 @@ export function DriverDetailsScreen({ userEmail, userName }: { userEmail?: strin
         userEmail={userEmail}
         userName={userName}
         summaryText="Review an individual driver profile, uploaded documents, and verification history."
-        onMenuClick={() => {}}
+        onMenuClick={() => setIsSidebarOpen(true)}
         onLogout={() => { window.location.href = '/auth/login'; }}
       />
 
       <AdminSidebar
-        isOpen={false}
-        activeSection="Drivers"
+        isOpen={isSidebarOpen}
+        activeSection={activeSection}
         items={adminSidebarItems}
-        onSelect={() => {}}
-        onClose={() => {}}
+        onSelect={(item) => setActiveSection(item)}
+        onClose={() => setIsSidebarOpen(false)}
         onLogout={() => { window.location.href = '/auth/login'; }}
       />
 

@@ -120,10 +120,24 @@ export function CustomerActiveDeliveries({ userEmail, userName }: Props) {
 
   useEffect(() => {
     if (!userEmail) return;
-    fetchCustomerOrders(userEmail!, userName ?? undefined)
-      .then(setOrders)
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false));
+    let mounted = true;
+    let interval: ReturnType<typeof setInterval>;
+
+    async function fetchOrders() {
+      try {
+        const data = await fetchCustomerOrders(userEmail!, userName ?? undefined);
+        if (mounted) setOrders(data);
+      } catch {
+        if (mounted) setOrders([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchOrders();
+    interval = setInterval(fetchOrders, 15000);
+
+    return () => { mounted = false; clearInterval(interval); };
   }, [userEmail, userName]);
 
   const activeOrders = useMemo(

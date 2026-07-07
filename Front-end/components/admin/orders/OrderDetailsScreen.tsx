@@ -212,7 +212,6 @@ export function OrderDetailsScreen({ userEmail, userName }: OrderDetailsScreenPr
 
   const handleSidebarSelect = (item: string) => {
     setActiveSection(item);
-    router.push(item === 'Dashboard' ? '/admin' : item === 'Orders' ? '/admin/orders' : item === 'Support' ? '/admin/support' : '/admin');
   };
 
   const handleLogout = () => { window.location.href = '/auth/login'; };

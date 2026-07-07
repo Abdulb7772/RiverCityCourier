@@ -43,7 +43,7 @@ export async function fetchDriverNotifications(email: string): Promise<Notificat
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
-  const response = await fetch(`/api/admin/notifications/${id}/read`, { method: 'PATCH' });
+  const response = await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to mark notification as read.');

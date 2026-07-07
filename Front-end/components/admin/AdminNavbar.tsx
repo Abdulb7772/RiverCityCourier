@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { fetchAdminNotifications, markAllNotificationsRead, type AppNotification } from '@/lib/notifications';
+import { fetchAdminNotifications, markAllNotificationsRead, markNotificationRead, type AppNotification } from '@/lib/notifications';
 
 type AdminNavbarProps = {
   userEmail?: string | null;
@@ -41,6 +41,14 @@ export function AdminNavbar({ userEmail, userName, summaryText, onMenuClick, onL
       .then((data) => { setNotifications(data.notifications); setUnreadCount(data.unreadCount); })
       .catch(() => {});
   }, []);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch {}
+  };
 
   const handleMarkAllRead = async () => {
     try {
@@ -113,19 +121,31 @@ export function AdminNavbar({ userEmail, userName, summaryText, onMenuClick, onL
                     <p className="text-sm font-semibold text-white">Notifications</p>
                     <p className="mt-0.5 text-xs text-orange-400/70">System alerts</p>
                   </div>
-                  <div className="divide-y divide-orange-900/20">
+                  <div className="divide-y divide-orange-900/20 max-h-60 overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="px-5 py-8 text-center text-sm text-orange-400/60">No notifications yet</div>
                     ) : (
                       notifications.slice(0, 10).map((item) => (
-                        <div key={item.id} className={`px-5 py-3 text-sm transition hover:bg-orange-950/60 ${item.read ? 'text-orange-100/50' : 'text-white'}`}>
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleMarkRead(item.id)}
+                          className={`flex w-full text-left px-5 py-3 text-sm transition hover:bg-orange-950/60 ${item.read ? 'text-orange-100/50' : 'text-white'}`}
+                        >
                           <p className="font-medium">{item.title}</p>
                           <p className="mt-0.5 text-xs text-orange-400/60 line-clamp-2">{item.message}</p>
-                        </div>
+                        </button>
                       ))
                     )}
                   </div>
-                  <div className="border-t border-orange-900/40 px-5 py-2">
+                  <div className="border-t border-orange-900/40 px-5 py-2 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => { setIsNotificationsOpen(false); router.push('/admin/notifications'); }}
+                      className="text-xs text-orange-400 hover:text-orange-300 transition"
+                    >
+                      View all
+                    </button>
                     <button
                       type="button"
                       onClick={handleMarkAllRead}

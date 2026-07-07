@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminNavbar } from '../AdminNavbar';
 import { AdminSidebar, adminSidebarItems } from '../AdminSidebar';
 import { AdminCustomer, fetchCustomer, updateCustomerStatus } from '@/lib/admin-customers';
+import { fetchOrders, type AdminOrder } from '@/lib/admin-orders';
 
 function ArrowLeftIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -63,12 +65,33 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const statusProgress: Record<AdminOrder['status'], number> = {
+  new: 15,
+  processing: 40,
+  picked_up: 70,
+  completed: 100,
+  rejected: 0,
+};
+
+const statusStyles: Record<AdminOrder['status'], string> = {
+  new: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
+  processing: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+  picked_up: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-200',
+  completed: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+  rejected: 'border-rose-500/40 bg-rose-500/10 text-rose-200',
+};
+
 export function CustomerDetailsScreen({ userEmail, userName, customerId }: { userEmail?: string | null; userName?: string | null; customerId: string }) {
   const [customer, setCustomer] = useState<AdminCustomer | null>(null);
   const [status, setStatus] = useState<string>('active');
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('Customers');
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -93,6 +116,18 @@ export function CustomerDetailsScreen({ userEmail, userName, customerId }: { use
     };
   }, [customerId]);
 
+  useEffect(() => {
+    if (!customer?.email) return;
+    let mounted = true;
+    fetchOrders()
+      .then((allOrders) => {
+        if (mounted) setOrders(allOrders.filter((o) => o.customerEmail === customer.email));
+      })
+      .catch(() => {})
+      .finally(() => { if (mounted) setOrdersLoading(false); });
+    return () => { mounted = false; };
+  }, [customer?.email]);
+
   const handleSave = async () => {
     if (!customer) return;
     setRequestError('');
@@ -108,6 +143,8 @@ export function CustomerDetailsScreen({ userEmail, userName, customerId }: { use
     }
   };
 
+  const handleLogout = () => { window.location.href = '/auth/login'; };
+
   return (
     <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.28),transparent_30%),radial-gradient(circle_at_top_right,rgba(251,146,60,0.14),transparent_25%),linear-gradient(180deg,#2b1606_0%,#0f172a_50%,#020617_100%)] text-white">
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-size-[48px_48px]" />
@@ -116,17 +153,17 @@ export function CustomerDetailsScreen({ userEmail, userName, customerId }: { use
         userEmail={userEmail}
         userName={userName}
         summaryText="View customer details, update status, and audit key account information."
-        onMenuClick={() => {}}
-        onLogout={() => { window.location.href = '/auth/login'; }}
+        onMenuClick={() => setIsSidebarOpen(true)}
+        onLogout={handleLogout}
       />
 
       <AdminSidebar
-        isOpen={false}
-        activeSection="Customers"
+        isOpen={isSidebarOpen}
+        activeSection={activeSection}
         items={adminSidebarItems}
-        onSelect={() => {}}
-        onClose={() => {}}
-        onLogout={() => { window.location.href = '/auth/login'; }}
+        onSelect={(item) => setActiveSection(item)}
+        onClose={() => setIsSidebarOpen(false)}
+        onLogout={handleLogout}
       />
 
       <main className="relative z-10 flex flex-1 flex-col gap-6 px-6 py-6 sm:px-8 lg:px-10">
@@ -140,7 +177,7 @@ export function CustomerDetailsScreen({ userEmail, userName, customerId }: { use
           </div>
           <button
             type="button"
-            onClick={() => { if (typeof window !== 'undefined') window.location.href = '/admin/customers'; }}
+            onClick={() => router.push('/admin/customers')}
             className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm font-semibold text-orange-100 transition hover:border-orange-400/50 hover:bg-orange-500/20"
           >
             <ArrowLeftIcon className="h-4 w-4" />
@@ -149,101 +186,167 @@ export function CustomerDetailsScreen({ userEmail, userName, customerId }: { use
         </div>
 
         {loading ? (
-          <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-orange-900/40 bg-slate-950/60 p-10 text-sm text-orange-100/70">
-            Loading customer details…
+          <div className="flex min-h-[280px] items-center justify-center border border-orange-900/40 bg-slate-950/60 p-10 text-sm text-orange-100/70">
+            Loading customer details...
           </div>
         ) : !customer ? (
-          <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-orange-900/40 bg-slate-950/60 p-10 text-sm text-orange-100/70">
+          <div className="flex min-h-[280px] items-center justify-center border border-orange-900/40 bg-slate-950/60 p-10 text-sm text-orange-100/70">
             Customer not found.
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-3">
-            <section className="rounded-3xl border border-orange-900/40 bg-slate-950/60 p-6 shadow-xl shadow-black/20 lg:col-span-2">
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-orange-900/20 pb-4 mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-3xl border border-orange-900/30 bg-orange-950/40 text-2xl font-semibold text-orange-200">
-                    {customer.fullName.charAt(0)}
+          <>
+            <div className="grid gap-5 lg:grid-cols-3">
+              <section className="border border-orange-900/40 bg-slate-950/60 p-6 shadow-xl shadow-black/20 lg:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-orange-900/20 pb-4 mb-6">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-orange-900/30 bg-orange-950/40 text-2xl font-semibold text-orange-200">
+                      {customer.fullName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{customer.fullName}</p>
+                      <p className="mt-1 text-xs text-orange-100/60 break-all">{customer.email}</p>
+                      <p className="mt-0.5 text-xs text-orange-100/60">{customer.phone}</p>
+                    </div>
                   </div>
+
+                  <StatusBadge status={customer.status} />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5 min-w-0">
+                    <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
+                      <MailIcon className="h-4 w-4 shrink-0 text-orange-400/80" />
+                      Email address
+                    </div>
+                    <p className="text-sm font-semibold text-white break-all">{customer.email}</p>
+                  </div>
+                  <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5 min-w-0">
+                    <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
+                      <PhoneIcon className="h-4 w-4 shrink-0 text-orange-400/80" />
+                      Phone number
+                    </div>
+                    <p className="text-sm font-semibold text-white">{customer.phone}</p>
+                  </div>
+                  <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5 min-w-0">
+                    <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
+                      <CalendarIcon className="h-4 w-4 shrink-0 text-orange-400/80" />
+                      Joined date
+                    </div>
+                    <p className="text-sm font-semibold text-white">{new Date(customer.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5 min-w-0">
+                    <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
+                      <PeopleIcon className="h-4 w-4 shrink-0 text-orange-400/80" />
+                      Account role
+                    </div>
+                    <p className="text-sm font-semibold text-white">Customer</p>
+                  </div>
+                </div>
+              </section>
+
+            <section className="border border-orange-900/40 bg-slate-950/60 p-6 shadow-xl shadow-black/20">
+                <div className="mb-5">
+                  <p className="text-[0.58rem] uppercase tracking-[0.4em] text-orange-400/70">Account actions</p>
+                  <p className="mt-2 text-sm leading-relaxed text-orange-100/70">
+                    Update the customer status and keep account access aligned with your policies.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
                   <div>
-                    <p className="text-sm font-semibold text-white">{customer.fullName}</p>
-                    <p className="mt-1 text-xs text-orange-100/60">{customer.email}</p>
-                    <p className="mt-0.5 ml-2 text-xs text-orange-100/60">{customer.phone}</p>
+                    <label htmlFor="customer-status" className="block text-xs uppercase tracking-[0.3em] text-orange-400/70">Status</label>
+                    <select
+                      id="customer-status"
+                      value={status}
+                      onChange={(event) => setStatus(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-orange-900/30 bg-slate-950/80 px-4 py-3 text-sm text-white outline-none focus:border-orange-500"
+                    >
+                      <option value="active">active</option>
+                      <option value="suspended">suspended</option>
+                      <option value="blocked">blocked</option>
+                    </select>
                   </div>
-                </div>
 
-                <StatusBadge status={customer.status} />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5">
-                  <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
-                    <MailIcon className="h-4 w-4 text-orange-400/80" />
-                    Email address
-                  </div>
-                  <p className="text-sm font-semibold text-white">{customer.email}</p>
-                </div>
-                <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5">
-                  <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
-                    <PhoneIcon className="h-4 w-4 ml-2 text-orange-400/80" />
-                    Phone number
-                  </div>
-                  <p className="text-sm font-semibold text-white">{customer.phone}</p>
-                </div>
-                <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5">
-                  <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
-                    <CalendarIcon className="h-4 w-4 text-orange-400/80" />
-                    Joined date
-                  </div>
-                  <p className="text-sm font-semibold text-white">{new Date(customer.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div className="rounded-3xl border border-orange-900/30 bg-orange-950/20 p-5">
-                  <div className="flex items-center gap-3 text-xs uppercase tracking-[0.35em] text-orange-400/60 mb-3">
-                    <PeopleIcon className="h-4 w-4 text-orange-400/80" />
-                    Account role
-                  </div>
-                  <p className="text-sm font-semibold text-white">Customer</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-orange-900/40 bg-slate-950/60 p-6 shadow-xl shadow-black/20">
-              <div className="mb-5">
-                <p className="text-[0.58rem] uppercase tracking-[0.4em] text-orange-400/70">Account actions</p>
-                <p className="mt-2 text-sm leading-relaxed text-orange-100/70">
-                  Update the customer status and keep account access aligned with your policies.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="customer-status" className="block text-xs uppercase tracking-[0.3em] text-orange-400/70">Status</label>
-                  <select
-                    id="customer-status"
-                    value={status}
-                    onChange={(event) => setStatus(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-orange-900/30 bg-slate-950/80 px-4 py-3 text-sm text-white outline-none focus:border-orange-500"
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-900/30 bg-orange-500/10 px-4 py-3 text-sm font-semibold text-orange-100 transition hover:border-orange-500/50 hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <option value="active">active</option>
-                    <option value="suspended">suspended</option>
-                    <option value="blocked">blocked</option>
-                  </select>
+                    {saving ? 'Saving status...' : 'Save status'}
+                  </button>
+
+                  {requestError && (
+                    <p className="text-sm text-rose-300">{requestError}</p>
+                  )}
                 </div>
+              </section>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-900/30 bg-orange-500/10 px-4 py-3 text-sm font-semibold text-orange-100 transition hover:border-orange-500/50 hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving ? 'Saving status…' : 'Save status'}
-                </button>
-
-                {requestError && (
-                  <p className="text-sm text-rose-300">{requestError}</p>
-                )}
+            {/* Orders Section */}
+            <section className="border border-orange-900/40 bg-slate-950/60 p-6 shadow-xl shadow-black/20">
+              <div className="flex items-center justify-between border-b border-orange-900/20 pb-4 mb-6">
+                <div>
+                  <p className="text-[0.58rem] uppercase tracking-[0.4em] text-orange-400/70">Order history</p>
+                  <h2 className="mt-1 text-xl font-semibold text-white">
+                    Orders by {customer.fullName}
+                  </h2>
+                </div>
+                <span className="border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs text-orange-300">
+                  {ordersLoading ? '...' : orders.length} total
+                </span>
               </div>
+
+              {ordersLoading ? (
+                <div className="flex items-center justify-center py-10 text-sm text-orange-100/50">
+                  Loading orders...
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="flex items-center justify-center py-10 text-sm text-orange-100/50">
+                  This customer has not placed any orders yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-orange-900/20 text-[0.6rem] uppercase tracking-[0.3em] text-orange-400/60">
+                        <th className="px-4 py-3 font-medium">Order</th>
+                        <th className="px-4 py-3 font-medium">Route</th>
+                        <th className="px-4 py-3 font-medium">Driver</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium">Date</th>
+                        <th className="px-4 py-3 font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-orange-900/10">
+                      {orders.map((order) => (
+                        <tr key={order.id} className="transition hover:bg-orange-950/30">
+                          <td className="px-4 py-3 font-medium text-white">{order.orderNumber}</td>
+                          <td className="px-4 py-3 text-orange-100/70 max-w-[200px] truncate">{order.pickup} &rarr; {order.destination}</td>
+                          <td className="px-4 py-3 text-orange-100/70">{order.assignedDriver || '\u2014'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`border px-2.5 py-0.5 text-[0.65rem] font-semibold ${statusStyles[order.status]}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-orange-100/70">{new Date(order.createdAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/admin/orders/${order.id}`)}
+                              className="text-xs text-orange-400 hover:text-orange-300 transition"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
-          </div>
+          </>
         )}
       </main>
     </div>

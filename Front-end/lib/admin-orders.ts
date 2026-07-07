@@ -4,6 +4,7 @@ export type AdminOrder = {
   id: string;
   orderNumber: string;
   customer: string;
+  customerEmail: string;
   pickup: string;
   destination: string;
   status: AdminOrderStatus;

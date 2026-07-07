@@ -207,6 +207,8 @@ export function DriversScreen({
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState('');
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('Drivers');
   const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
   const [pendingPage, setPendingPage] = useState(1);
   const [verifiedPage, setVerifiedPage] = useState(1);
@@ -260,16 +262,16 @@ export function DriversScreen({
         userEmail={userEmail}
         userName={userName}
         summaryText="Manage driver accounts, review submitted documents, and approve verifications."
-        onMenuClick={() => {}}
+        onMenuClick={() => setIsSidebarOpen(true)}
         onLogout={() => { window.location.href = '/auth/login'; }}
       />
 
       <AdminSidebar
-        isOpen={false}
-        activeSection="Drivers"
+        isOpen={isSidebarOpen}
+        activeSection={activeSection}
         items={adminSidebarItems}
-        onSelect={() => {}}
-        onClose={() => {}}
+        onSelect={(item) => setActiveSection(item)}
+        onClose={() => setIsSidebarOpen(false)}
         onLogout={() => { window.location.href = '/auth/login'; }}
       />
 
