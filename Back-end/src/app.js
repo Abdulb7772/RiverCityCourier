@@ -7,10 +7,16 @@ const authRoutes = require('./routes/authRoutes');
 const { backfillMissingUserRoles } = require('./models/userModel');
 
 const app = express();
-const frontendOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:3000')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const frontendOriginEnv = process.env.FRONTEND_ORIGIN;
+const frontendOrigins = frontendOriginEnv
+  ? frontendOriginEnv.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : [];
+
+if (frontendOrigins.length > 0) {
+  console.log('Allowed frontend origins:', frontendOrigins);
+} else {
+  console.log('No FRONTEND_ORIGIN set; allowing all origins for CORS');
+}
 
 app.use(
   cors({
@@ -19,7 +25,7 @@ app.use(
         return callback(null, true);
       }
 
-      if (frontendOrigins.includes(origin)) {
+      if (frontendOrigins.length === 0 || frontendOrigins.includes(origin)) {
         return callback(null, true);
       }
 
