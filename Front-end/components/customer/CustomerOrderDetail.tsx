@@ -232,7 +232,7 @@ export function CustomerOrderDetail({ orderId, userEmail, userName }: Props) {
           <div>
             <p className="text-[0.58rem] uppercase tracking-[0.45em] text-orange-400/60">Order detail</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
-              {order ? order.orderNumber : 'Order not found'}
+              {order ? order.orderNumber : 'Loading....'}
             </h1>
           </div>
           <Link
